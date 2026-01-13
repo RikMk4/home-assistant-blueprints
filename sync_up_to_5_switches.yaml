@@ -12,35 +12,31 @@ blueprint:
         entity:
           domain: switch
           multiple: true
-variables:
-  switch_entities: !input switch_entities
-trigger:
-  - platform: state
-    entity_id: !input switch_entities
-    from: 'off'
-    to: 'on'
-  - platform: state
-    entity_id: !input switch_entities
-    from: 'on'
-    to: 'off'
-condition:
-  - condition: template
-    value_template: "{{ trigger.to_state.context.parent_id == none }}"
-action:
-  # Дебаунс: ждём 3 секунды для стабилизации состояния
-  - wait_template: "{{ (as_timestamp(now()) - as_timestamp(trigger.to_state.last_changed) | int) > 3 }}"
-    timeout: 3
+  variables:
+    switch_entities: !input switch_entities
+  trigger:
+    - platform: state
+      entity_id: !input switch_entities
+      from: 'off'
+      to: 'on'
+    - platform: state
+      entity_id: !input switch_entities
+      from: 'on'
+      to: 'off'
+  condition:
+    - condition: template
+      value_template: "{{ trigger.to_state.context.parent_id == none }}"
+  action:
+    # Дебаунс: ждём 3 секунды
+    - wait_template: "{{ (as_timestamp(now()) - as_timestamp(trigger.to_state.last_changed) | int) > 3 }}"
+      timeout: 3
 
-  # Определяем целевое действие
-  - set_variable:
-      target_state: "{{ trigger.to_state.state }}"
-
-  # Применяем состояние ко всем переключателям
-  - service: >
-      {% if target_state == 'on' %}
-      switch.turn_on
-      {% else %}
-      switch.turn_off
-      {% endif %}
-    data:
-      entity_id: "{{ switch_entities }}"
+    # Определяем целевое действие
+    - service: >
+        {% if trigger.to_state.state == 'on' %}
+        switch.turn_on
+        {% else %}
+        switch.turn_off
+        {% endif %}
+      data:
+        entity_id: "{{ switch_entities }}"

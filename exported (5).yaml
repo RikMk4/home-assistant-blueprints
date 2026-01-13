@@ -1,0 +1,29 @@
+blueprint:
+  name: Sync Multiple Switches (2–10)
+  description: >
+    Synchronizes 2–10 switches: when one turns on, all turn on;
+    when one turns off, all turn off. Prevents loops via context check.
+  domain: automation
+  input:
+    switch_entities:
+      name: Switches to sync
+      description: Select 2–10 switches to synchronize
+      selector:
+        entity:
+          domain: switch
+          multiple: true
+  trigger:
+    - platform: state
+      entity_id: !input switch_entities
+      from: 'off'
+      to: 'on'
+    - platform: state
+      entity_id: !input switch_entities
+      from: 'on'
+      to: 'off'
+  condition:
+    - condition: template
+      value_template: "{{ trigger.to_state.context.parent_id == none }}"
+  action:
+    # Дебаунс: ждём 3 секунды для стабилизации сигнала
+    - wait_template:

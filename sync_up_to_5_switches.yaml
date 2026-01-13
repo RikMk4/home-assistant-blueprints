@@ -1,8 +1,4 @@
-blueprint:
-  name: Sync up to 5 switches
-  description: >
-    Synchronizes the state of up to 5 switches: 
-    when one is turned on, all turn on; when one is turned off, all turn off.
+
   domain: automation
   input:
     switch_entities:

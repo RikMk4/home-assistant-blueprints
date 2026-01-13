@@ -25,11 +25,8 @@ blueprint:
     - condition: template
       value_template: "{{ trigger.to_state.context.parent_id == none }}"
   action:
-    # Дебаунс: ждём 3 секунды
     - wait_template: "{{ (as_timestamp(now()) - as_timestamp(trigger.to_state.last_changed) | int) > 3 }}"
       timeout: 3
-
-    # Основное действие: включаем/выключаем все выключатели
     - service: >
         {% if trigger.to_state.state == 'on' %}
         switch.turn_on

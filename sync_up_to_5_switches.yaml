@@ -1,0 +1,14 @@
+action:
+  - delay: 0.5
+  - set_variable:
+      action_service: |
+        {% if trigger.to_state.state == 'on' %} switch.turn_on {% else %} switch.turn_off {% endif %}
+  - repeat:
+      for_each: "{{ switch_entities }}"
+      if:
+        condition: template
+        value_template: "{{ repeat.item != trigger.entity_id }}"
+      do:
+        - service: "{{ action_service }}"
+          data:
+            entity_id: "{{ repeat.item }}"

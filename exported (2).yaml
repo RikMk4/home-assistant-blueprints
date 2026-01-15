@@ -35,4 +35,94 @@ trigger:
     entity_id:
       - !input switch_entity1
       - !input switch_entity2
-      - !input
+      - !input switch_entity3
+      - !input switch_entity4
+
+
+condition:
+  - condition: template
+    value_template: >
+      {{ trigger.to_state.context.parent_id == none and
+         trigger.to_state.state in ['on', 'off'] }}
+
+action:
+  # Дебаунс: ждём 3 секунды
+  - delay: "00:00:03"
+
+
+  # Обрабатываем Switch 1
+  - if:
+      - "{{ trigger.entity_id == switch_entity1 }}"
+    then:
+      - service: >-
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% elif trigger.to_state.state == 'off' %}
+          switch.turn_off
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id: "{{ switch_entity2 }}"
+
+      - service: >-
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% elif trigger.to_state.state == 'off' %}
+          switch.turn_off
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id: "{{ switch_entity3 }}"
+
+      - service: >-
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% elif trigger.to_state.state == 'off' %}
+          switch.turn_off
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id: "{{ switch_entity4 }}"
+
+  # Обрабатываем Switch 2 (аналогично)
+  - if:
+      - "{{ trigger.entity_id == switch_entity2 }}"
+    then:
+      - service: >-
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% elif trigger.to_state.state == 'off' %}
+          switch.turn_off
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id: "{{ switch_entity1 }}"
+
+      - service: >-
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% elif trigger.to_state.state == 'off' %}
+          switch.turn_off
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id: "{{ switch_entity3 }}"
+
+      - service: >-
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% elif trigger.to_state.state == 'off' %}
+          switch.turn_off
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id: "{{ switch_entity4 }}"
+
+
+  # Switch 3 и Switch 4 — аналогично (сокращено для примера)

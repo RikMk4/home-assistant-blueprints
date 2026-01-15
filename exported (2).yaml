@@ -1,20 +1,50 @@
 blueprint:
-  name: Test Sync Switches
-  description: Minimal test automation
+  name: Sync
+  description: Synchronizes the state of up to 5 switches.
   domain: automation
   input:
     switch_entities:
-      name: Test Switches
+      name: Switches to sync
+      description: Select 2–5 switches to synchronize
       selector:
         entity:
           domain: switch
           multiple: true
 
+variables:
+  switch_entities: !input switch_entities
+
 trigger:
   - platform: state
     entity_id: !input switch_entities
 
+condition:
+  - condition: template
+    value_template: "{{ trigger.to_state.state in ['on', 'off'] }}"
+
+
 action:
-  - service: switch.turn_on
+  # Дебаунс: 3 секунды
+  - delay: "00:00:03"
+
+
+  # Сохраняем целевое состояние
+  - set_variable:
+      target_state: "{{ trigger.to_state.state }}"
+
+
+  # Фильтруем список: исключаем триггерный переключатель
+  - set_variable:
+      filtered_switches: >
+        {% set trigger_id = trigger.entity_id %}
+        {{ switch_entities | reject("eq", trigger_id) | list }}
+
+  # Применяем состояние к отфильтрованным переключателям
+  - service: "switch.turn_{{ target_state }}"
     data:
-      entity_id: !input switch_entities
+      entity_id: >
+        {% if filtered_switches | length > 0 %}
+        {{ filtered_switches | join(',') }}
+        {% else %}
+        null
+        {% endif %}

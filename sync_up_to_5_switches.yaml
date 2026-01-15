@@ -67,6 +67,9 @@ action:
           {% endif %}
         data:
           entity_id: "{{ switch_entity2 }}"
+          entity_id: "{{ switch_entity3 }}"
+          entity_id: "{{ switch_entity4 }}"
+          entity_id: "{{ switch_entity5 }}"
     else:
       - service: >
           {% if trigger.to_state.state == 'on' %}
@@ -76,3 +79,6 @@ action:
           {% endif %}
         data:
           entity_id: "{{ switch_entity1 }}"
+          entity_id: "{{ switch_entity3 }}"
+          entity_id: "{{ switch_entity4 }}"
+          entity_id: "{{ switch_entity5 }}"

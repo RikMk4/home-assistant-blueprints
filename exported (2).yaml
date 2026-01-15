@@ -1,83 +1,84 @@
 blueprint:
-  name: Sync up to 5 switches (with logging)
-  description: >
-    Synchronizes the state of up to 5 switches. When one changes, others follow (excluding the trigger).
+  name: Sync four switches
+  description: Turn on all switches when any is turned on; turn off all when all are off.
   domain: automation
   input:
-    switch_entities:
-      name: Switches to sync
-      description: Select 2–5 switches to synchronize
+    switch_entity1:
+      name: Switch 1
       selector:
         entity:
           domain: switch
-          multiple: true
+    switch_entity2:
+      name: Switch 2
+      selector:
+        entity:
+          domain: switch
+    switch_entity3:
+      name: Switch 3
+      selector:
+        entity:
+          domain: switch
+    switch_entity4:
+      name: Switch 4
+      selector:
+        entity:
+          domain: switch
 
 variables:
-  switch_entities: !input switch_entities
+  switch_entity1: !input switch_entity1
+  switch_entity2: !input switch_entity2
+  switch_entity3: !input switch_entity3
+  switch_entity4: !input switch_entity4
 
 trigger:
   - platform: state
-    entity_id: !input switch_entities
+    entity_id:
+      - !input switch_entity1
+      - !input switch_entity2
+      - !input switch_entity3
+      - !input switch_entity4
 
 condition:
   - condition: template
-    value_template: "{{ trigger.to_state.state in ['on', 'off'] }}"
+    value_template: >
+      {{ trigger.to_state.context.parent_id == none and
+         trigger.to_state.state in ['on', 'off'] }}
 
 action:
-  # 1. Дебаунс: 3 секунды против ложных срабатываний
+  # Дебаунс: ждём 3 секунды, чтобы отфильтровать дребезг
   - delay: "00:00:03"
 
-  # 2. Логирование начального состояния
-  - logger.log:
-      message: >
-        [Sync Switches] 
-        - Trigger entity: {{ trigger.entity_id }}
-        - Trigger state: {{ trigger.to_state.state }}
-        - All entities: {{ switch_entities | map('str') | join(', ') }}
-        - Timestamp: {{ now().strftime('%Y-%m-%d %H:%M:%S') }}
-      level: info
-
-  # 3. Сохраняем целевое состояние
-  - set_variable:
-      target_state: "{{ trigger.to_state.state }}"
-
-  # 4. Фильтруем список: исключаем триггерный переключатель
-  - set_variable:
-      filtered_switches: >
-        {% set trigger_id = trigger.entity_id %}
-        {{ switch_entities | map('str') | reject("eq", trigger_id) | list }}
-
-  # 5. Логирование отфильтрованного списка
-  - logger.log:
-      message: >
-        [Sync Switches]
-        - Target state: {{ target_state }}
-        - Filtered switches (excl. trigger): {{ filtered_switches | join(', ') if filtered_switches else 'none' }}
-        - Count: {{ filtered_switches | length }}
-      level: info
-
-  # 6. Проверяем, есть ли переключатели для изменения
+  # Проверяем, есть ли хотя бы один включённый переключатель
   - if:
-      - "{{ filtered_switches | length > 0 }}"
+      - "{{ is_state(switch_entity1, 'on') or
+           is_state(switch_entity2, 'on') or
+           is_state(switch_entity3, 'on') or
+           is_state(switch_entity4, 'on') }}"
     then:
-      # 7. Применяем состояние к отфильтрованным переключателям
-      - service: "switch.turn_{{ target_state }}"
+      # Включаем все переключатели
+      - service: switch.turn_on
         data:
-          entity_id: "{{ filtered_switches | join(',') }}"
-
-      # 8. Логирование успешного выполнения
-      - logger.log:
-          message: >
-            [Sync Switches] Action executed:
-            - Service: switch.turn_{{ target_state }}
-            - Target entities: {{ filtered_switches | join(', ') }}
-            - Status: SUCCESS
-          level: info
+          entity_id: "{{ switch_entity1 }}"
+      - service: switch.turn_on
+        data:
+          entity_id: "{{ switch_entity2 }}"
+      - service: switch.turn_on
+        data:
+          entity_id: "{{ switch_entity3 }}"
+      - service: switch.turn_on
+        data:
+          entity_id: "{{ switch_entity4 }}"
     else:
-      # 9. Логирование пропуска (если нет целей)
-      - logger.log:
-          message: >
-            [Sync Switches] Skipped action:
-            - Reason: No target entities (filtered_switches is empty)
-            - Status: NO_OP
-          level: warning
+      # Выключаем все переключатели
+      - service: switch.turn_off
+        data:
+          entity_id: "{{ switch_entity1 }}"
+      - service: switch.turn_off
+        data:
+          entity_id: "{{ switch_entity2 }}"
+      - service: switch.turn_off
+        data:
+          entity_id: "{{ switch_entity3 }}"
+      - service: switch.turn_off
+        data:
+          entity_id: "{{ switch_entity4 }}"

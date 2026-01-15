@@ -1,7 +1,6 @@
 blueprint:
   name: Sync up to 5 switches
-  description: >
-    Synchronizes the state of up to 5 switches. When one is turned on, all turn on; when one is turned off, all turn off.
+  description: Synchronizes the state of up to 5 switches.
   domain: automation
   input:
     switch_entities:
@@ -19,40 +18,28 @@ trigger:
   - platform: state
     entity_id: !input switch_entities
 
+
 condition:
   - condition: template
     value_template: "{{ trigger.to_state.state in ['on', 'off'] }}"
 
-action:
-  # Логирование: начальная информация
-  - logger.log:
-      message: >
-        [Sync Switches] Triggered by: {{ trigger.entity_id }}
-        State: {{ trigger.to_state.state }},
-        All switches: {{ switch_entities }}
-      level: info
 
-  # Дебаунс: 0.5 сек
+action:
+  # Дебаунс
   - delay: "00:00:00.500"
+
 
   # Определяем целевое состояние
   - set_variable:
       target_state: "{{ trigger.to_state.state }}"
 
-  # Фильтруем список: исключаем триггерный переключатель
+  # Фильтруем список (исключаем триггерный переключатель)
   - set_variable:
       filtered_switches: >
         {% set trigger_id = trigger.entity_id %}
         {{ switch_entities | reject("eq", trigger_id) | list }}
 
-  # Логирование: отфильтрованный список
-  - logger.log:
-      message: >
-        [Sync Switches] Target state: {{ target_state }},
-        Affected switches (excluding trigger): {{ filtered_switches }}
-      level: info
-
-  # Применяем состояние ко всем отфильтрованным переключателям
+  # Применяем состояние к отфильтрованным переключателям
   - service: "switch.turn_{{ target_state }}"
     data:
       entity_id: >
@@ -61,11 +48,3 @@ action:
         {% else %}
         null
         {% endif %}
-
-  # Логирование: результат выполнения
-  - logger.log:
-      message: >
-        [Sync Switches] Action completed.
-        Service: switch.turn_{{ target_state }},
-        Target entities: {{ filtered_switches if filtered_switches | length > 0 else 'none' }}
-      level: info

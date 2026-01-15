@@ -19,11 +19,11 @@ condition:
 action:
   - delay: "0:00:00.50"
   - service: >
-      {% if trigger.to_state.state == 'on' %}
+      {% if (trigger and trigger.to_state and trigger.to_state.state == 'on') %}
       switch.turn_on
       {% else %}
       switch.turn_off
       {% endif %}
     data:
       entity_id: >
-        {{ switch_entities | join(', ') }}
+        {{ switch_entities | reject('equalto', trigger.entity_id) | join(', ') }}

@@ -31,9 +31,12 @@ action:
   - set_variable:
       target_state: "{{ trigger.to_state.state }}"
 
-  # Применяем ко всем переключателям, кроме триггерного
+  # Применяем ко всем переключателям КРОМЕ триггерного
   - repeat:
-      for_each: "{{ switch_entities }}"
+      for_each: >
+        {% set trigger_id = trigger.entity_id %}
+        {{ switch_entities | reject("eq", trigger_id) | list }}
       do:
         - service: "switch.turn_{{ target_state }}"
           data:
+            entity_id: "{{ repeat.item }}"

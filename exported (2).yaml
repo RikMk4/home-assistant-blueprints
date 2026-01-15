@@ -1,5 +1,5 @@
 blueprint:
-  name: Sync up to 5 switches
+  name: SYNC 5
   description: Turn on/off all switches when any one is turned on/off
   domain: automation
   input:

@@ -1,7 +1,6 @@
 blueprint:
-  name: SНТС 5
-  description: >
-    Synchronizes the state of up to 5 switches. When one is turned on, all turn on; when one is turned off, all turn off.
+  name: Sync up to 5 switches
+  description: Turn on/off all switches when any one is turned on/off
   domain: automation
   input:
     switch_entities:
@@ -12,45 +11,48 @@ blueprint:
           domain: switch
           multiple: true
 
+
 variables:
   switch_entities: !input switch_entities
+
 
 trigger:
   - platform: state
     entity_id: !input switch_entities
+    from: 'on'
+    to: 'off'
+  - platform: state
+    entity_id: !input switch_entities
+    from: 'off'
+    to: 'on'
 
-condition:
-  - condition: template
-    value_template: "{{ trigger.to_state.state in ['on', 'off'] }}"
+
+condition: "{{ trigger.to_state.context.parent_id == none }}"
+
 
 action:
-  # Дебаунс: 3 секунды против ложных срабатываний
+  # Дебаунс: задержка 3 секунды (надёжнее, чем wait_template)
   - delay: "00:00:03"
 
-  # Сохраняем целевое состояние (on/off)
+
+  # Определяем целевое состояние
   - set_variable:
       target_state: "{{ trigger.to_state.state }}"
 
-  # Фильтруем список: исключаем триггерный переключатель
+
+  # Фильтруем список: исключаем триггерный выключатель
   - set_variable:
-      filtered_switches: >
+      other_switches: >
         {% set trigger_id = trigger.entity_id %}
         {{ switch_entities | reject("eq", trigger_id) | list }}
 
-  # Применяем состояние ко всем отфильтрованным переключателям
+
+  # Применяем состояние к остальным выключателям
   - service: "switch.turn_{{ target_state }}"
     data:
       entity_id: >
-        {% if filtered_switches | length > 0 %}
-        {{ filtered_switches | join(',') }}
+        {% if other_switches | length > 0 %}
+        {{ other_switches | join(',') }}
         {% else %}
         null
         {% endif %}
-
-  # Опционально: логирование (раскомментируйте для отладки)
-  # - logger.log:
-  #     message: >
-  #       [Sync Switches] Trigger: {{ trigger.entity_id }},
-  #       Target state: {{ target_state }},
-  #       Affected: {{ filtered_switches | join(',') if filtered_switches else 'none' }}
-  #     level: info

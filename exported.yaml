@@ -24,20 +24,16 @@ condition:
     value_template: "{{ trigger.to_state.state in ['on', 'off'] }}"
 
 action:
-  # Дебаунс
+  # Дебаунс: 0.5 сек
   - delay: "00:00:00.500"
 
-  # Определяем действие
+  # Определяем целевое состояние
   - set_variable:
       target_state: "{{ trigger.to_state.state }}"
 
-  # Применяем ко всем переключателям КРОМЕ триггерного
+  # Применяем ко всем переключателям, кроме триггерного
   - repeat:
       for_each: "{{ switch_entities }}"
       do:
-        - if:
-            - "{{ repeat.item != trigger.entity_id }}"
-          then:
-            - service: "switch.turn_{{ target_state }}"
-              data:
-                entity_id: "{{ repeat.item }}"
+        - service: "switch.turn_{{ target_state }}"
+          data:

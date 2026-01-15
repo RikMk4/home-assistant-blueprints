@@ -24,6 +24,14 @@ condition:
     value_template: "{{ trigger.to_state.state in ['on', 'off'] }}"
 
 action:
+  # Логирование: начальная информация
+  - logger.log:
+      message: >
+        [Sync Switches] Triggered by: {{ trigger.entity_id }}
+        State: {{ trigger.to_state.state }},
+        All switches: {{ switch_entities }}
+      level: info
+
   # Дебаунс: 0.5 сек
   - delay: "00:00:00.500"
 
@@ -31,14 +39,33 @@ action:
   - set_variable:
       target_state: "{{ trigger.to_state.state }}"
 
-  # Применяем ко всем переключателям КРОМЕ триггерного (одним вызовом)
+  # Фильтруем список: исключаем триггерный переключатель
+  - set_variable:
+      filtered_switches: >
+        {% set trigger_id = trigger.entity_id %}
+        {{ switch_entities | reject("eq", trigger_id) | list }}
+
+  # Логирование: отфильтрованный список
+  - logger.log:
+      message: >
+        [Sync Switches] Target state: {{ target_state }},
+        Affected switches (excluding trigger): {{ filtered_switches }}
+      level: info
+
+  # Применяем состояние ко всем отфильтрованным переключателям
   - service: "switch.turn_{{ target_state }}"
     data:
       entity_id: >
-        {% set trigger_id = trigger.entity_id %}
-        {% set filtered = switch_entities | reject("eq", trigger_id) | list %}
-        {% if filtered | length > 0 %}
-        {{ filtered | join(',') }}
+        {% if filtered_switches | length > 0 %}
+        {{ filtered_switches | join(',') }}
         {% else %}
         null
         {% endif %}
+
+  # Логирование: результат выполнения
+  - logger.log:
+      message: >
+        [Sync Switches] Action completed.
+        Service: switch.turn_{{ target_state }},
+        Target entities: {{ filtered_switches if filtered_switches | length > 0 else 'none' }}
+      level: info

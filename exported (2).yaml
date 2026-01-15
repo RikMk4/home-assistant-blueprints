@@ -1,6 +1,6 @@
 blueprint:
-  name: Sync four switches with light control
-  description: Синхронизирует 4 выключателя и управляет светом: включает при любом «on», выключает когда все «off».
+  name: Sync four switches
+  description: Turn on a switch when any of the others is turned on, and vice versa.
   domain: automation
   input:
     switch_entity1:
@@ -23,19 +23,12 @@ blueprint:
       selector:
         entity:
           domain: switch
-    light_entity:
-      name: Light to control
-      description: Светильник, которым управляют выключатели
-      selector:
-        entity:
-          domain: light
 
 variables:
   switch_entity1: !input switch_entity1
   switch_entity2: !input switch_entity2
   switch_entity3: !input switch_entity3
   switch_entity4: !input switch_entity4
-  light_entity: !input light_entity
 
 trigger:
   - platform: state
@@ -52,48 +45,113 @@ condition:
          trigger.to_state.state in ['on', 'off'] }}
 
 action:
-  # Дебаунс: 5 мс (0.005 секунд)
-  - delay: "00:00:00.005"
+  # Дебаунс: ждём 3 секунды, чтобы отфильтровать дребезг
+  - delay: "00:00:03"
 
-  # Шаг 1: Проверяем, есть ли хотя бы один включённый выключатель
+  # Определяем, какой переключатель сработал, и синхронизируем остальные
   - if:
-      - "{{ is_state(switch_entity1, 'on') or
-           is_state(switch_entity2, 'on') or
-           is_state(switch_entity3, 'on') or
-           is_state(switch_entity4, 'on') }}"
+      - "{{ trigger.entity_id == switch_entity1 }}"
     then:
-      # Действие 1a: Включаем свет
-      - service: light.turn_on
-        data:
-          entity_id: "{{ light_entity }}"
-      # Действие 1b: Синхронизируем все выключатели в «on»
-      - service: switch.turn_on
-        data:
-          entity_id: "{{ switch_entity1 }}"
-      - service: switch.turn_on
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
         data:
           entity_id: "{{ switch_entity2 }}"
-      - service: switch.turn_on
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
         data:
           entity_id: "{{ switch_entity3 }}"
-      - service: switch.turn_on
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id: "{{ switch_entity4 }}"
+    elif:
+      - "{{ trigger.entity_id == switch_entity2 }}"
+    then:
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id: "{{ switch_entity1 }}"
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id: "{{ switch_entity3 }}"
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id: "{{ switch_entity4 }}"
+    elif:
+      - "{{ trigger.entity_id == switch_entity3 }}"
+    then:
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id: "{{ switch_entity1 }}"
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id: "{{ switch_entity2 }}"
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
         data:
           entity_id: "{{ switch_entity4 }}"
     else:
-      # Действие 2a: Выключаем свет
-      - service: light.turn_off
-        data:
-          entity_id: "{{ light_entity }}"
-      # Действие 2b: Синхронизируем все выключатели в «off»
-      - service: switch.turn_off
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
         data:
           entity_id: "{{ switch_entity1 }}"
-      - service: switch.turn_off
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
         data:
           entity_id: "{{ switch_entity2 }}"
-      - service: switch.turn_off
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
         data:
           entity_id: "{{ switch_entity3 }}"
-      - service: switch.turn_off
-        data:
-          entity_id: "{{ switch_entity4 }}"

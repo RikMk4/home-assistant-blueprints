@@ -1,0 +1,113 @@
+blueprint:
+  name: Sync four switches (optimized)
+  description: Turn on/off all switches synchronously with minimal delay.
+  domain: automation
+  input:
+    switch_entity1:
+      name: Switch 1
+      selector:
+        entity:
+          domain: switch
+    switch_entity2:
+      name: Switch 2
+      selector:
+        entity:
+          domain: switch
+    switch_entity3:
+      name: Switch 3
+      selector:
+        entity:
+          domain: switch
+    switch_entity4:
+      name: Switch 4
+      selector:
+        entity:
+          domain: switch
+
+variables:
+  switch_entity1: !input switch_entity1
+  switch_entity2: !input switch_entity2
+  switch_entity3: !input switch_entity3
+  switch_entity4: !input switch_entity4
+
+trigger:
+  - platform: state
+    entity_id:
+      - !input switch_entity1
+      - !input switch_entity2
+      - !input switch_entity3
+      - !input switch_entity4
+
+condition:
+  - condition: template
+    value_template: >
+      {{ trigger.to_state.context.parent_id == none and
+         trigger.to_state.state in ['on', 'off'] }}
+
+action:
+  # Уменьшенный дебаунс: 1 секунда вместо 3
+  - delay: "00:00:01"
+
+  # Обработка Switch 1 → синхронизация остальных
+  - if:
+      - "{{ trigger.entity_id == switch_entity1 }}"
+    then:
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id:
+            - "{{ switch_entity2 }}"
+            - "{{ switch_entity3 }}"
+            - "{{ switch_entity4 }}"
+
+  # Обработка Switch 2 → синхронизация остальных
+  - if:
+      - "{{ trigger.entity_id == switch_entity2 }}"
+    then:
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id:
+            - "{{ switch_entity1 }}"
+            - "{{ switch_entity3 }}"
+            - "{{ switch_entity4 }}"
+
+  # Обработка Switch 3 → синхронизация остальных
+  - if:
+      - "{{ trigger.entity_id == switch_entity3 }}"
+    then:
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id:
+            - "{{ switch_entity1 }}"
+            - "{{ switch_entity2 }}"
+            - "{{ switch_entity4 }}"
+
+  # Обработка Switch 4 → синхронизация остальных
+  - if:
+      - "{{ trigger.entity_id == switch_entity4 }}"
+    then:
+      - service: >
+          {% if trigger.to_state.state == 'on' %}
+          switch.turn_on
+          {% else %}
+          switch.turn_off
+          {% endif %}
+        data:
+          entity_id:
+            - "{{ switch_entity1 }}"
+            - "{{ switch_entity2 }}"
+            - "{{ switch_entity3 }}"

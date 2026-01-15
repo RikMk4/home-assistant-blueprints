@@ -1,12 +1,9 @@
 blueprint:
   name: Sync up to 5 switches
-  description: >
-    Synchronizes the state of up to 5 switches. When one is turned on, all turn on; when one is turned off, all turn off.
   domain: automation
   input:
     switch_entities:
       name: Switches to sync
-      description: Select 2–5 switches to synchronize
       selector:
         entity:
           domain: switch
@@ -18,10 +15,9 @@ trigger:
     entity_id: !input switch_entities
 condition:
   - condition: template
-    value_template: "{{ trigger.to_state.state in ['on', 'off'] }}"
+    value_template: "{{ trigger.to_state.state in ['on','off'] }}"
 action:
   - delay: "0:00:00.50"
-  # Применяем ко всем переключателям, кроме триггерного
   - service: >
       {% if trigger.to_state.state == 'on' %}
       switch.turn_on
@@ -30,4 +26,4 @@ action:
       {% endif %}
     data:
       entity_id: >
-        {{ switch_entities | rejectattr('entity_id', 'equalto', trigger.entity_id) | map(attribute='entity_id') | join(', ') }}
+        {{ switch_entities | join(', ') }}

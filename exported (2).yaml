@@ -1,0 +1,52 @@
+blueprint:
+  name: Sync up to 5 switches
+  description: Turn on/off all switches when any one is turned on/off
+  domain: automation
+  input:
+    switch_entities:
+      name: Switches to sync
+      description: Select 2–5 switches to synchronize
+      selector:
+        entity:
+          domain: switch
+          multiple: true  # Позволяет выбрать несколько выключателей
+
+variables:
+  switch_entities: !input switch_entities
+
+trigger:
+  - platform: state
+    entity_id: !input switch_entities  # Все выбранные выключатели
+    from: 'on'
+    to: 'off'
+  - platform: state
+    entity_id: !input switch_entities
+    from: 'off'
+    to: 'on'
+
+condition: "{{ trigger.to_state.context.parent_id == none }}"
+
+action:
+  # Дебаунс: ждём 3 секунды
+  - wait_template: "{{ (as_timestamp(now()) - as_timestamp(trigger.to_state.last_changed) | int > 3) }}"
+    timeout: 3
+
+  # Определяем целевое состояние
+  - set_variable:
+      target_state: "{{ trigger.to_state.state }}"
+
+  # Фильтруем список: исключаем триггерный выключатель
+  - set_variable:
+      other_switches: >
+        {% set trigger_id = trigger.entity_id %}
+        {{ switch_entities | reject("eq", trigger_id) | list }}
+
+  # Применяем состояние к остальным выключателям
+  - service: "switch.turn_{{ target_state }}"
+    data:
+      entity_id: >
+        {% if other_switches | length > 0 %}
+        {{ other_switches | join(',') }}
+        {% else %}
+        null
+        {% endif %}

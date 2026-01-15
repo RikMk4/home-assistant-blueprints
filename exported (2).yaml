@@ -1,157 +1,52 @@
-blueprint:
-  name: Sync four switches
-  description: Turn on a switch when any of the others is turned on, and vice versa.
-  domain: automation
-  input:
-    switch_entity1:
-      name: Switch 1
-      selector:
-        entity:
-          domain: switch
-    switch_entity2:
-      name: Switch 2
-      selector:
-        entity:
-          domain: switch
-    switch_entity3:
-      name: Switch 3
-      selector:
-        entity:
-          domain: switch
-    switch_entity4:
-      name: Switch 4
-      selector:
-        entity:
-          domain: switch
-
-variables:
-  switch_entity1: !input switch_entity1
-  switch_entity2: !input switch_entity2
-  switch_entity3: !input switch_entity3
-  switch_entity4: !input switch_entity4
-
-trigger:
-  - platform: state
-    entity_id:
-      - !input switch_entity1
-      - !input switch_entity2
-      - !input switch_entity3
-      - !input switch_entity4
-
-condition:
-  - condition: template
-    value_template: >
-      {{ trigger.to_state.context.parent_id == none and
-         trigger.to_state.state in ['on', 'off'] }}
-
-action:
-  # Дебаунс: ждём 3 секунды, чтобы отфильтровать дребезг
-  - delay: "00:00:03"
-
-  # Определяем, какой переключатель сработал, и синхронизируем остальные
-  - if:
-      - "{{ trigger.entity_id == switch_entity1 }}"
-    then:
-      - service: >
-          {% if trigger.to_state.state == 'on' %}
-          switch.turn_on
-          {% else %}
-          switch.turn_off
-          {% endif %}
-        data:
-          entity_id: "{{ switch_entity2 }}"
-      - service: >
-          {% if trigger.to_state.state == 'on' %}
-          switch.turn_on
-          {% else %}
-          switch.turn_off
-          {% endif %}
-        data:
-          entity_id: "{{ switch_entity3 }}"
-      - service: >
-          {% if trigger.to_state.state == 'on' %}
-          switch.turn_on
-          {% else %}
-          switch.turn_off
-          {% endif %}
-        data:
-          entity_id: "{{ switch_entity4 }}"
-    elif:
-      - "{{ trigger.entity_id == switch_entity2 }}"
-    then:
-      - service: >
-          {% if trigger.to_state.state == 'on' %}
-          switch.turn_on
-          {% else %}
-          switch.turn_off
-          {% endif %}
-        data:
-          entity_id: "{{ switch_entity1 }}"
-      - service: >
-          {% if trigger.to_state.state == 'on' %}
-          switch.turn_on
-          {% else %}
-          switch.turn_off
-          {% endif %}
-        data:
-          entity_id: "{{ switch_entity3 }}"
-      - service: >
-          {% if trigger.to_state.state == 'on' %}
-          switch.turn_on
-          {% else %}
-          switch.turn_off
-          {% endif %}
-        data:
-          entity_id: "{{ switch_entity4 }}"
-    elif:
-      - "{{ trigger.entity_id == switch_entity3 }}"
-    then:
-      - service: >
-          {% if trigger.to_state.state == 'on' %}
-          switch.turn_on
-          {% else %}
-          switch.turn_off
-          {% endif %}
-        data:
-          entity_id: "{{ switch_entity1 }}"
-      - service: >
-          {% if trigger.to_state.state == 'on' %}
-          switch.turn_on
-          {% else %}
-          switch.turn_off
-          {% endif %}
-        data:
-          entity_id: "{{ switch_entity2 }}"
-      - service: >
-          {% if trigger.to_state.state == 'on' %}
-          switch.turn_on
-          {% else %}
-          switch.turn_off
-          {% endif %}
-        data:
-          entity_id: "{{ switch_entity4 }}"
-    else:
-      - service: >
-          {% if trigger.to_state.state == 'on' %}
-          switch.turn_on
-          {% else %}
-          switch.turn_off
-          {% endif %}
-        data:
-          entity_id: "{{ switch_entity1 }}"
-      - service: >
-          {% if trigger.to_state.state == 'on' %}
-          switch.turn_on
-          {% else %}
-          switch.turn_off
-          {% endif %}
-        data:
-          entity_id: "{{ switch_entity2 }}"
-      - service: >
-          {% if trigger.to_state.state == 'on' %}
-          switch.turn_on
-          {% else %}
-          switch.turn_off
-          {% endif %}
-        data:
-          entity_id: "{{ switch_entity3 }}"
+- alias: Проходные выключатели (до 5 штук)
+  description: >
+    Синхронизирует состояние до 5 выключателей: при изменении любого — 
+    остальные принимают то же состояние (включено/выключено).
+  trigger:
+    - platform: state
+      entity_id:
+        - switch.passage_switch_1
+        - switch.passage_switch_2
+        - switch.passage_switch_3
+        - switch.passage_switch_4
+        - switch.passage_switch_5
+  action:
+    # Если триггерный выключатель стал ON → включаем остальные
+    - if:
+        condition: state
+        entity_id: "{{ trigger.entity_id }}"
+        state: "on"
+      then:
+        - service: homeassistant.turn_on
+          target:
+            entity_id: >
+              {% set trigger_entity = trigger.entity_id %}
+              {% set all_switches = [
+                'switch.passage_switch_1',
+                'switch.passage_switch_2',
+                'switch.passage_switch_3',
+                'switch.passage_switch_4',
+                'switch.passage_switch_5'
+              ] %}
+              {% set others = all_switches | reject('eq', trigger_entity) | list %}
+              {{ others }}
+    # Если триггерный выключатель стал OFF → выключаем остальные
+    - if:
+        condition: state
+        entity_id: "{{ trigger.entity_id }}"
+        state: "off"
+      then:
+        - service: homeassistant.turn_off
+          target:
+            entity_id: >
+              {% set trigger_entity = trigger.entity_id %}
+              {% set all_switches = [
+                'switch.passage_switch_1',
+                'switch.passage_switch_2',
+                'switch.passage_switch_3',
+                'switch.passage_switch_4',
+                'switch.passage_switch_5'
+              ] %}
+              {% set others = all_switches | reject('eq', trigger_entity) | list %}
+              {{ others }}
+  mode: restart

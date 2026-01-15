@@ -1,6 +1,6 @@
 blueprint:
-  name: Sync four switches (no light control)
-  description: Синхронизирует 4 выключателя: все принимают состояние on, если хотя бы один включён, и off, если все выключены.
+  name: Sync four switches with light control
+  description: Синхронизирует 4 выключателя и управляет светом: включает при любом «on», выключает когда все «off».
   domain: automation
   input:
     switch_entity1:
@@ -23,12 +23,19 @@ blueprint:
       selector:
         entity:
           domain: switch
+    light_entity:
+      name: Light to control
+      description: Светильник, которым управляют выключатели
+      selector:
+        entity:
+          domain: light
 
 variables:
   switch_entity1: !input switch_entity1
   switch_entity2: !input switch_entity2
   switch_entity3: !input switch_entity3
   switch_entity4: !input switch_entity4
+  light_entity: !input light_entity
 
 trigger:
   - platform: state
@@ -37,20 +44,56 @@ trigger:
       - !input switch_entity2
       - !input switch_entity3
       - !input switch_entity4
-    for: "00:00:00.1"
 
 condition:
   - condition: template
     value_template: >
-      {{ trigger.to_state.context.parent_id == none }}
+      {{ trigger.to_state.context.parent_id == none and
+         trigger.to_state.state in ['on', 'off'] }}
 
 action:
-  # Шаг 1: Гарантируем актуальные состояния
-  - service: homeassistant.update
-    data: {}
-  - delay: "00:00:00.1"
+  # Дебаунс: 5 мс (0.005 секунд)
+  - delay: "00:00:00.005"
 
-  # Шаг 2: Проверяем, есть ли хотя бы один включённый выключатель
+  # Шаг 1: Проверяем, есть ли хотя бы один включённый выключатель
   - if:
       - "{{ is_state(switch_entity1, 'on') or
-           is_state(switch_entity2,
+           is_state(switch_entity2, 'on') or
+           is_state(switch_entity3, 'on') or
+           is_state(switch_entity4, 'on') }}"
+    then:
+      # Действие 1a: Включаем свет
+      - service: light.turn_on
+        data:
+          entity_id: "{{ light_entity }}"
+      # Действие 1b: Синхронизируем все выключатели в «on»
+      - service: switch.turn_on
+        data:
+          entity_id: "{{ switch_entity1 }}"
+      - service: switch.turn_on
+        data:
+          entity_id: "{{ switch_entity2 }}"
+      - service: switch.turn_on
+        data:
+          entity_id: "{{ switch_entity3 }}"
+      - service: switch.turn_on
+        data:
+          entity_id: "{{ switch_entity4 }}"
+    else:
+      # Действие 2a: Выключаем свет
+      - service: light.turn_off
+        data:
+          entity_id: "{{ light_entity }}"
+      # Действие 2b: Синхронизируем все выключатели в «off»
+      - service: switch.turn_off
+        data:
+          entity_id: "{{ switch_entity1 }}"
+      - service: switch.turn_off
+        data:
+          entity_id: "{{ switch_entity2 }}"
+      - service: switch.turn_off
+        data:
+          entity_id: "{{ switch_entity3 }}"
+      - service: switch.turn_off
+        data:
+          entity_id: "{{ switch_entity4 }}"

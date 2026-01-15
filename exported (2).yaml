@@ -1,6 +1,6 @@
 blueprint:
   name: Sync four switches (no light control)
-  description: Синхронизирует 4 выключателя: все принимают состояние «on», если хотя бы один включён, и «off», если все выключены.
+  description: Синхронизирует 4 выключателя: все принимают состояние on, если хотя бы один включён, и off, если все выключены.
   domain: automation
   input:
     switch_entity1:
@@ -37,7 +37,7 @@ trigger:
       - !input switch_entity2
       - !input switch_entity3
       - !input switch_entity4
-    for: "00:00:00.1"  # Фильтр дребезга (100 мс)
+    for: "00:00:00.1"
 
 condition:
   - condition: template
@@ -45,7 +45,7 @@ condition:
       {{ trigger.to_state.context.parent_id == none }}
 
 action:
-  # Шаг 1: Гарантируем актуальные состояния (обновление + небольшая задержка)
+  # Шаг 1: Гарантируем актуальные состояния
   - service: homeassistant.update
     data: {}
   - delay: "00:00:00.1"
@@ -53,34 +53,4 @@ action:
   # Шаг 2: Проверяем, есть ли хотя бы один включённый выключатель
   - if:
       - "{{ is_state(switch_entity1, 'on') or
-           is_state(switch_entity2, 'on') or
-           is_state(switch_entity3, 'on') or
-           is_state(switch_entity4, 'on') }}"
-    then:
-      # Все выключатели переводятся в «on»
-      - service: switch.turn_on
-        data:
-          entity_id:
-            - "{{ switch_entity1 }}"
-            - "{{ switch_entity2 }}"
-            - "{{ switch_entity3 }}"
-            - "{{ switch_entity4 }}"
-    else:
-      # Все выключатели переводятся в «off»
-      - service: switch.turn_off
-        data:
-          entity_id:
-            - "{{ switch_entity1 }}"
-            - "{{ switch_entity2 }}"
-            - "{{ switch_entity3 }}"
-            - "{{ switch_entity4 }}"
-
-  # Шаг 3: Отладка (опционально) — выводит состояния в лог
-  - service: logbook.log
-    data:
-      message: >
-        Синхронизация выключателей:
-        - {{ switch_entity1 }}: {{ state_attr(switch_entity1, 'state') }}
-        - {{ switch_entity2 }}: {{ state_attr(switch_entity2, 'state') }}
-        - {{ switch_entity3 }}: {{ state_attr(switch_entity3, 'state') }}
-        - {{ switch_entity4 }}: {{ state_attr(switch_entity4, 'state') }}
+           is_state(switch_entity2,

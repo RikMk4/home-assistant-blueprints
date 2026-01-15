@@ -11,9 +11,10 @@ blueprint:
     slave_switches:
       name: Подчинённые выключатели
       selector:
-        entity:
-          domain: switch
-          multiple: true
+        target:
+          entity:
+            domain: switch
+            multiple: true
 
 trigger:
   - platform: state
@@ -21,7 +22,6 @@ trigger:
 
 action:
   - service: switch.turn_{{ trigger.to_state.state }}
-    target:
-      entity_id: !input slave_switches
+    target: !input slave_switches
 
 mode: single
